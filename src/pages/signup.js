@@ -1,29 +1,29 @@
-import React, { useState } from 'react'
-import './signup.css'
-import { useNavigate } from 'react-router-dom';
-import { Button } from './components/button/Button';
-import signin from '../images/signin.svg' ;
-import Navbar from './components/nav';
+import React, { useState } from "react";
+import "./signup.css";
+import { useNavigate } from "react-router-dom";
+import { Button } from "./components/button/Button";
+import signin from "../images/signin.svg";
+import Navbar from "./components/nav";
+import PasswordChecklist from "react-password-checklist";
 
 export default function Signup() {
   const navigate = useNavigate();
 
   // Setting user, email, password, cpassword states
-  const [user, setuser] = useState('');
-  const [email, setemail] = useState('');
-  
-  const [addr, setAddr] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [user, setuser] = useState("");
+  const [email, setemail] = useState("");
 
-  const [password, setpassword] = useState('');
-  const [cpassword, setcpassword] = useState('');
+  const [addr, setAddr] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+
+  const [password, setpassword] = useState("");
+  const [cpassword, setcpassword] = useState("");
   let currUserId = "";
-  let qrcode ="";
+  let qrcode = "";
   // Keeping track of email/pass validity
   let emailIsValid = false;
-  let passlIsValid = false;
+  let passwordIsValid = false;
   let phoneIsValid = false;
-
 
   /**
    * Checks if the user input email is valid or not
@@ -33,38 +33,24 @@ export default function Signup() {
     const isValidEmail = emailRegex.test(email);
     if (isValidEmail) {
       emailIsValid = true;
-    }
-    else {
+    } else {
       emailIsValid = false;
     }
-  }
+  };
 
   /**
    * Compares user input pass with compare pass
    */
-  const passValidation = () => {    
-    if ((password.length > 8) && (!cpassword.localeCompare(password)))  {
-      passlIsValid = true;
-    }
-    else {
-      passlIsValid = false;   
-    }
-  }
-
-  /**
-   * Compares user input pass with compare pass
-   */
-  const phoneValidation = () => {    
-    if ((phoneNumber.length == 10))  {
+  const phoneValidation = () => {
+    if (phoneNumber.length == 10) {
       phoneIsValid = true;
+    } else {
+      phoneIsValid = false;
     }
-    else {
-      phoneIsValid = false;   
-    }
-  }
+  };
 
   /**
-   * 
+   *
    * @param {JSON} userInfo User info in JSON format
    * @returns User Id if success / false if fail
    */
@@ -77,7 +63,7 @@ export default function Signup() {
           "Content-Type": "application/json",
         },
       });
-  
+
       if (resp.ok) {
         const userId = await resp.json();
         return userId;
@@ -91,7 +77,7 @@ export default function Signup() {
   };
 
   const fetch2FA = async (userInfo) => {
-    try{
+    try {
       const resp = await fetch("http://localhost:5000/qrauth", {
         method: "get",
         body: JSON.stringify(userInfo),
@@ -100,90 +86,168 @@ export default function Signup() {
         },
       });
       console.log(resp);
-
     } catch (error) {
       console.log(error);
       return null;
     }
-  }
-  
+  };
+
+  const createNewUserSettings = async (userId) => {
+    try {
+      const resp = await fetch("http://localhost:5000/userSettings", {
+        method: "post",
+        body: JSON.stringify(userId),
+        headers: { "Content-Type": "application/json" },
+      });
+      console.log(resp);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   /**
    * Handles Submit Form
-   * @param {Event} event Form Data 
+   * @param {Event} event Form Data
    */
-  const submitform = async event => { 
+  const submitform = async (event) => {
     event.preventDefault();
 
     emailValidation();
-    passValidation();
     phoneValidation();
 
     // Checking is user entry is valid
-    if (emailIsValid && passlIsValid && phoneIsValid) {      
+    if (emailIsValid && passwordIsValid && phoneIsValid) {
       const userInfo = {
-        name : user, 
-        email : email, 
-        password : password,
-        address : addr,
-        phoneNumber : phoneNumber,
+        name: user,
+        email: email,
+        password: password,
+        address: addr,
+        phoneNumber: phoneNumber,
         mfa: false,
         status: false,
         tempSecret: "",
-        locked: false
-      }; 
-      
+        locked: false,
+      };
+
       // Fetchig new User ID
       currUserId = await fetchId(userInfo);
       if (currUserId) {
-        alert(`User has been successfully added. The User Id is : ${currUserId}`);
+        alert(
+          `User has been successfully added. The User Id is : ${currUserId}`
+        );
+        createNewUserSettings(currUserId);
         //gen qr
         qrcode = await fetch2FA(userInfo);
         console.log("Tester: ", qrcode);
-      }
-      else {
+        navigate("/signin");
+      } else {
         alert("Sign up failed");
       }
-    }
-    else {      
-      if (!(emailIsValid || passlIsValid)) {
-        console.log(emailIsValid, passlIsValid);
+    } else {
+      if (!(emailIsValid || passwordIsValid)) {
+        console.log(emailIsValid, passwordIsValid);
         alert("Your email and password is invalid");
-      }
-      else if (!emailIsValid) {
+      } else if (!emailIsValid) {
         alert("Your email is invalid");
-      }
-      else {
-        alert("Your password is invalid");
+      } else {
+        alert(
+          "Your password is invalid. Please make sure your password meets the requirements."
+        );
       }
     }
-    navigate('/qrauth');
-  }
-      
+    navigate("/signin");
+  };
+
   return (
-  <>
-    <Navbar/>
-    <div className="signup" id = "signup">
-      <div className='signup-form'>
-        <h2 className='sign-subheader'>Hi there!</h2>
-        <h1 className='sign-header'>Sign Up</h1>
-        <div className = "signin-fields">
-          <form className='signup-form-form'>
-              <input className='input-field' type = "textbox" placeholder="Name"  required value={user} onChange={(e) => setuser(e.target.value)}/>    
-              <input className='input-field' type = "Email" placeholder="Email" required value={email} onChange={(e) => setemail(e.target.value)}/>
-              <input className='input-field' type = "password" placeholder="Password" required value={password} onChange={(e) => setpassword(e.target.value)}/>
-              <input className='input-field' type = "password" placeholder="Confirm your password" required value={cpassword} onChange={(e) => setcpassword(e.target.value)}/> 
-              <input className='input-field' type = "text" placeholder="Enter your address" required value={addr} onChange={(e) => setAddr(e.target.value)}/>        
-              <input className='input-field' type="tel" placeholder="Enter your phone number" required value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}/>
-          </form>
-          <Button buttonColor='primary' buttonSize='btn-medium' buttonStyle='btn-primary' onClick={submitform}>
-            Sign up
-          </Button>
+    <>
+      <Navbar />
+      <div className="signup" id="signup">
+        <div className="signup-form">
+          <h2 className="sign-subheader">Hi there!</h2>
+          <h1 className="sign-header">Sign Up</h1>
+          <div className="signin-fields">
+            <form className="signup-form-form">
+              <input
+                className="input-field"
+                type="textbox"
+                placeholder="Name"
+                required
+                value={user}
+                onChange={(e) => setuser(e.target.value)}
+              />
+              <input
+                className="input-field"
+                type="Email"
+                placeholder="Email"
+                required
+                value={email}
+                onChange={(e) => setemail(e.target.value)}
+              />
+              <input
+                className="input-field"
+                type="password"
+                placeholder="Password"
+                required
+                value={password}
+                onChange={(e) => setpassword(e.target.value)}
+              />
+              <input
+                className="input-field"
+                type="password"
+                placeholder="Confirm your password"
+                required
+                value={cpassword}
+                onChange={(e) => setcpassword(e.target.value)}
+              />
+              <input
+                className="input-field"
+                type="text"
+                placeholder="Enter your address"
+                required
+                value={addr}
+                onChange={(e) => setAddr(e.target.value)}
+              />
+              <input
+                className="input-field"
+                type="tel"
+                placeholder="Enter your phone number"
+                required
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
+              <PasswordChecklist
+                rules={[
+                  "minLength",
+                  "specialChar",
+                  "number",
+                  "capital",
+                  "match",
+                ]}
+                minLength={8}
+                value={password}
+                valueAgain={cpassword}
+                onChange={(isValid) => {
+                  passwordIsValid = isValid;
+                }}
+                style={{ marginLeft: "10px" }}
+                validColor={"#4CAF4F"}
+                iconSize={15}
+              />
+            </form>
+            <Button
+              buttonColor="primary"
+              buttonSize="btn-medium"
+              buttonStyle="btn-primary"
+              onClick={submitform}
+            >
+              Sign up
+            </Button>
+          </div>
+        </div>
+        <div className="signup-img">
+          <img className="signuppic" src={signin} alt="" />
         </div>
       </div>
-      <div className='signup-img'>
-        <img className='signuppic' src={signin} alt=""/>
-      </div>
-    </div>
-  </>
-  )
+    </>
+  );
 }
